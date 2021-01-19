@@ -1,4 +1,7 @@
 """add to read me"""
+import sqlite3
+
+import sqlalchemy
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Date, insert, ForeignKey
 from datetime import datetime
 
@@ -11,7 +14,7 @@ that base - this is known as the declarative base class."""
 from sqlalchemy.ext.declarative import declarative_base
 
 
-engine = create_engine('sqlite:////home/sujata/sqliteDb/assignmentNiyuj.db', echo = True)
+engine = create_engine('sqlite:////home/sujata/Desktop/Evaluation-Criteria-Assignment-1/assignmentNiyuj.db', echo = True)
 Session = sessionmaker(bind = engine)
 Base = declarative_base()
 
@@ -42,16 +45,21 @@ Base.metadata.create_all(engine)
 
 class Project_class(Exception):
 
-    def insert_table_values(self, pname, status,lead_id):
+    def insert_table_values(self, pid, pname, status,lead_id):
         session = Session()
 
-        insert_query = Project(pname= pname, status = status, lead_id = lead_id)
-        session.add(insert_query)
-        session.commit()
-        session.refresh(insert_query)
-        session.close()
-
-        return insert_query.pname
+        insert_query = Project(pid = pid, pname= pname, status = status, lead_id = lead_id)
+        try:
+            session.add(insert_query)
+            session.commit()
+            session.refresh(insert_query)
+            session.close()
+        except sqlite3.IntegrityError as e:
+            print(str(e))
+        except sqlalchemy.exc.IntegrityError as e:
+            print("Unique constraint failed: Project id should be unique")
+        else:
+            return insert_query.pname
 
     def delete_record(self, id):
         session = Session()
@@ -135,46 +143,47 @@ if __name__=='__main__':
 
             count = int(input("How many Projects you want to enter?"))
             for i in range(0, count, 1):
-                name = str(input("Enter Project name"))
-                status = str(input("Enter Status (Active/Closed"))
-                empid = int(input('Enter Lead Id'))
-                records.append([name, status, empid])
+                pid = int(input("Enter Project id : "))
+                name = str(input("Enter Project name : "))
+                status = str(input("Enter Status (Active/Closed) : "))
+                empid = int(input('Enter Lead Id : '))
+                records.append([pid, name, status, empid])
 
             for i in range(0,len(records)) :
 
                 #print(len(records))
                 print(records)
                 try:
-                    result=project.insert_table_values(records[i][0], records[i][1], records[i][2])
+                    result=project.insert_table_values(records[i][0], records[i][1], records[i][2], records[i][3])
                 except NameError:
                     print("Error")
                 else:
-                    print("Inserted project :",result)
+                    print("Inserted project : ", result)
 
         elif choice == 2:
             try:
-                id = int(input("Enter Project Id to be deleted"))
+                id = int(input("Enter Project Id to be deleted : "))
             except ValueError:
                 print("Insert Valid Id(Interger)")
             else:
                 result = project.delete_record(id)
                 if result == 1:
-                    print("deleted: ")
+                    print("deleted")
                 else:
                     raise Exception("Record not found!!")
 
         elif choice == 3:
             # update
             try:
-                id = int(input("Enter project Id to be updated"))
-                status = input("enter status Active/Closed")
+                id = int(input("Enter project Id to be updated : "))
+                status = input("enter status Active/Closed) : ")
 
             except ValueError:
                 print("Insert Valid values")
             else:
                 result = project.update_record(id, status)
                 if result == 1:
-                    print("updated: ")
+                    print("updated")
                 else:
                     raise Exception("Record not found!!")
 
@@ -182,7 +191,7 @@ if __name__=='__main__':
         elif choice == 4:
             project.display()
         elif choice == 5:
-            status = (input("Enter status to list project"))
+            status = (input("Enter status to list project : "))
             project.project_name(status)
         else:
             print("Invalid option. Try again!")

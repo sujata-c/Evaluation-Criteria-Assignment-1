@@ -1,21 +1,20 @@
-
-# ORM used SqlAlchemy
-
-"""add to read me"""
+import sqlite3
+import sqlalchemy
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Date, insert, ForeignKey
 from datetime import datetime
 
 """ to interact with the database, we need to obtain its handle. 
     A session object is the handle to database."""
 from sqlalchemy.orm import sessionmaker, relationship
+
 """Classes mapped using the Declarative system are defined in terms of 
 a base class which maintains a catalog of classes and tables relative to 
 that base - this is known as the declarative base class."""
 from sqlalchemy.ext.declarative import declarative_base
 
-
-engine = create_engine('sqlite:////home/sujata/sqliteDb/assignmentNiyuj.db', echo = True)
-Session = sessionmaker(bind = engine)
+"""The return value of create_engine() is an instance of Engine, and it represents the core interface to the database"""
+engine = create_engine('sqlite:////home/sujata/Desktop/Evaluation-Criteria-Assignment-1/assignmentNiyuj.db', echo = True)
+Session = sessionmaker(bind=engine)
 Base = declarative_base()
 
 
@@ -42,31 +41,25 @@ EmployeeDb.project = relationship("Project", order_by = Project.pid, back_popula
 Base.metadata.create_all(engine)
 
 
-'''meta = MetaData()
-employees = Table(
-      'employees', meta,
-      Column('id', Integer, primary_key=True),  # auto increment
-      Column('name', String),
-      Column('lastname', String),
-      Column('join_date',Date),
-      Column('experience_years',Integer)
-     )
-#meta.create_all(engine)      # create table'''
-
-
 class Employee(Exception):
 
-    def insert_table_values(self, name, lastname,join_date,experience_years):
+    def insert_table_values(self, id, name, lastname, join_date, experience_years):
         session = Session()
 
-        insert_query = EmployeeDb(name= name, lastname = lastname,
+        insert_query = EmployeeDb(id=id, name= name, lastname = lastname,
                                   join_date = join_date, experience_years = experience_years)
-        session.add(insert_query)
-        session.commit()
-        session.refresh(insert_query)
-        session.close()
+        try:
+            session.add(insert_query)
+            session.commit()
+            session.refresh(insert_query)
+            session.close()
+        except sqlite3.IntegrityError as e:
+            print(str(e))
+        except sqlalchemy.exc.IntegrityError as e:
+            print("Unique constraint failed: employee id should be unique")
 
-        return insert_query.name
+        else:
+            return insert_query.name
 
     def delete_record(self, id):
         session = Session()
@@ -105,7 +98,7 @@ class Employee(Exception):
         result = session.query(Project).filter(Project.lead_id == eid)
         project_name = None
         for row in result:
-            print("Project Id: ", row.pid, " Project Name :", row.pname)
+            print("Project Id : ", row.pid, " Project Name : ", row.pname, " Status : ", row.status)
             project_name = row.pname
         session.close()
 
@@ -120,7 +113,8 @@ class Employee(Exception):
             choice = int(input("Enter your choice"))
         except ValueError:
             print("enter 1 to 6")
-        return choice
+        else:
+            return choice
 
 
 # define Python user-defined exceptions
@@ -138,8 +132,7 @@ class MonthValueError(Exception):
     pass
 
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
 
     emp = Employee()
     choice = emp.getChoice()
@@ -150,17 +143,15 @@ if __name__=='__main__':
 
             count = int(input("How many Employees you want to enter?"))
             for i in range(0, count, 1):
-                emp_info=[]
-                # id=int(input("enter id"))
-                name = str(input("Enter Employee name"))
-                lastname = str(input("Enter Last name"))
+                id = int(input("Enter id : "))
+                name = str(input("Enter Employee name : "))
+                lastname = str(input("Enter Last name : "))
 
-                date_entry = input('Enter join date (i.e. 2017-7-1)')
+                date_entry = input('Enter join date (i.e. 2017-7-1) : ')
                 try:
                     year, month, day = map(int, date_entry.split('-'))
                     if year > 2020 or year < 1960:
                         raise YearValueError
-
                     if month > 12 or month <=0:
                         raise MonthValueError
                     date = datetime(year, month, day)
@@ -177,14 +168,17 @@ if __name__=='__main__':
                     print("date no valid")
 
                 experience_years =int(input('Experience years'))
-                records.append([id, name, lastname, join_date, experience_years])
+                try:
+                    records.append([id, name, lastname, join_date, experience_years])
+                except NameError:
+                    print("Insert proper data")
 
             for i in range(0,len(records)) :
 
                 #print(len(records))
                 print(records)
                 try:
-                    result=emp.insert_table_values(records[i][1], records[i][2], records[i][3], records[i][4])
+                    result=emp.insert_table_values(records[i][0], records[i][1], records[i][2], records[i][3],records[i][4])
                 except NameError:
                     print("Error")
                 else:
@@ -192,28 +186,28 @@ if __name__=='__main__':
 
         elif choice == 2:
             try:
-                id = int(input("Enter Employee Id to be deleted"))
+                id = int(input("Enter Employee Id to be deleted : "))
             except ValueError:
                 print("Insert Valid Id(Interger)")
             else:
                 result = emp.delete_record(id)
                 if result == 1:
-                    print("deleted: ")
+                    print("Deleted")
                 else:
                     raise Exception("Record not found!!")
 
         elif choice == 3:
             # update
             try:
-                id = int(input("Enter Employee Id to be updated"))
-                exp_yrs = int(input("enter new experience year count"))
+                id = int(input("Enter Employee Id to be updated : "))
+                exp_yrs = int(input("Enter new experience year count"))
 
             except ValueError:
                 print("Insert Valid values")
             else:
                 result = emp.update_record(id, exp_yrs)
                 if result == 1:
-                    print("updated: ")
+                    print("Updated")
                 else:
                     raise Exception("Record not found!!")
 
@@ -221,7 +215,7 @@ if __name__=='__main__':
         elif choice == 4:
             emp.display()
         elif choice == 5:
-            eid=int(input("Enter employee id whose project you want"))
+            eid=int(input("Enter employee id whose project you want : "))
             emp.project_name(eid)
         else:
             print("Invalid option. Try again!")
